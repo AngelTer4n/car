@@ -1,0 +1,7 @@
+#1! /bin/bash
+# En este script copiamos un archivo a la lista de maquinas
+file='todos'
+if [ $# -gt 1 ]; then
+	file = $2
+fi
+while IFS = read -r line # en esta rutina leemos lo que la maquina tiene escrito

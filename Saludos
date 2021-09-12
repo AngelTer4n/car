@@ -1,0 +1,16 @@
+ssh cero ./saludos
+ssh uno ./saludos
+ssh dos ./saludos
+ssh tres ./saludos
+ssh cuatro ./saludos
+ssh cinco ./saludos
+ssh seis ./saludos
+ssh siete ./saludos
+ssh ocho ./saludos
+ssh nueve ./saludos
+ssh diez ./saludos
+ssh once ./saludos
+ssh doce ./saludos
+ssh trece ./saludos
+ssh catorce ./saludos
+ssh quince ./saludos

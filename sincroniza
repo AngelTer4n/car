@@ -1,0 +1,11 @@
+#! /bin/bash
+file='todos' #se lee el archivo de todos los nodos
+if [ $# -gt 1 ]; then
+        file = $2
+fi
+while IFS= read -r line # aquí se lee lo que tiene la máquina
+do
+       rsync "$1" "$USER"@"$line": # el comando rsync hace la sincronización del archivo
+done <"$file"
+
+

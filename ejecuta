@@ -1,0 +1,22 @@
+#!/bin/bash  
+file='todos' #Aquí se lee el archivo todos, que son los nodos
+if [ $# -gt 1 ]; then
+	file = $2 # $2 se le asigna una variable
+fi  
+if [[ ! -f "$file" || ! -r "$file" || ! -w "$file" ]]  #condicionales
+then
+  echo "la maquina virtual $file no es accesible" # echo imprime un texto en la consola
+  echo "Asegurate que $2 sea un archivo de texto con el nombre"
+  echo "de los nodos linea por linea"
+  exit 1
+fi
+
+while IFS= read -r line # en esta rutina leemos lo que la maquina tiene escrito
+do			# y pasamos a realizar la copia del archivo
+	# Se ejecuta el comando en todos los nodos
+	echo "======"
+	ssh -n $line hostname  # hostname es el nombre del nodo
+	echo "======"
+	ssh -n $line $1
+	echo
+done <"$file"
