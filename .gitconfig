@@ -1,0 +1,7 @@
+[user]
+	email = angel.teran@uabc.edu.mx
+	name = Angel Terán
+[diff]
+	tool = vimdiff
+[difftool]
+	prompt = false
