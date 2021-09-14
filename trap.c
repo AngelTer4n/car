@@ -1,4 +1,4 @@
-/* trap.c -- Parallel Trapezoidal Rule (tercera versión). Estructura de Arbol
+/* trap.c -- Parallel Trapezoidal Rule (cuarta versión). Funciones Bcast.
  *
  * Input: Se introduce los valores de integración [a,b] y el número de 
           trapezoides.
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     int         p;         /* The number of processes   */
     float       a;         /* Límite izquierdo          */
     float       b;         /* Límite derecho            */
-    int         n;         /* Número de trapezoides     */
+    int         n;         /* Number of trapezoids      */
     float       h;         /* Trapezoid base length     */
     float       local_a;   /* Left endpoint my process  */
     float       local_b;   /* Right endpoint my process */
@@ -45,8 +45,7 @@ int main(int argc, char** argv) {
     int         tag = 0;
     MPI_Status  status;
 
-    void Get_data1(float* a_ptr, float* b_ptr, 
-         int* n_ptr, int my_rank, int p); /*la función Get_data que reparta en input a los demás nodos*/
+    void Get_data2(float* a_ptr, float* b_ptr, int* n_ptr, int my_rank); /*la función Get_data que reparta en input a los demás nodos*/
     float Trap(float local_a, float local_b, int local_n,
               float h);    /* Calculate local integral  */
 
@@ -59,7 +58,7 @@ int main(int argc, char** argv) {
     /* Find out how many processes are being used */
     MPI_Comm_size(MPI_COMM_WORLD, &p);
 
-    Get_data1(&a, &b, &n, my_rank, p);/*Aquí leemos los datos desde la terminal*/
+    Get_data2(&a, &b, &n, my_rank);/*Aquí leemos los datos desde la terminal*/
 
     h = (b-a)/n;    /* h is the same for all processes */
     local_n = n/p;  /* So is the number of trapezoids */
@@ -75,21 +74,21 @@ int main(int argc, char** argv) {
     if (my_rank == 0) {
         total = integral;
         for (source = 1; source < p; source++) {
-            MPI_Recv(&integral, 1, MPI_FLOAT, source, tag,
+            MPI_Recv(&integral, 1, MPI_FLOAT, source, tag, 
                 MPI_COMM_WORLD, &status);
             total = total + integral;
         }
-    } else {  
-        MPI_Send(&integral, 1, MPI_FLOAT, dest,
+    } else {   
+        MPI_Send(&integral, 1, MPI_FLOAT, dest, 
             tag, MPI_COMM_WORLD);
     }
 
     /* Print the result */
     if (my_rank == 0) {
-        printf("With n = %d trapezoids, our estimate\n",
+        printf("With n = %d trapezoids, our estimate\n", 
             n);
-        printf("of the integral from %f to %f = %f\n",
-            a, b, total);
+        printf("of the integral from %f to %f = %f\n", 
+            a, b, total); 
     }
 
     /* Shut down MPI */
@@ -182,71 +181,44 @@ void Receive(
 
 
 /********************************************************************/
-/* Function Get_data1
- * Reads in the user input a, b, and n.
- * Input parameters:
- *     1.  int my_rank:  rank of current process.
- *     2.  int p:  number of processes.
- * Output parameters:  
- *     1.  float* a_ptr:  pointer to left endpoint a.
- *     2.  float* b_ptr:  pointer to right endpoint b.
- *     3.  int* n_ptr:  pointer to number of trapezoids.
- * Algorithm:
- *     1.  Process 0 prompts user for input and
- *         reads in the values.
- *     2.  Process 0 sends input values to other
- *         processes using hand-coded tree-structured
- *         broadcast.
- */
-void Get_data1(
-        float*  a_ptr    /* out */,
-        float*  b_ptr    /* out */,
-        int*    n_ptr    /* out */,
-        int     my_rank  /* in  */, 
-        int     p        /* in  */) {
+/* Función Get_data2*/
 
-    int source;
-    int dest;
-    int stage;
+void Get_data2(
+         float*  a_ptr    /* out */, 
+         float*  b_ptr    /* out */, 
+         int*    n_ptr    /* out */,
+         int     my_rank  /* in  */) {
 
-    int Ceiling_log2(int  x);
-    int I_receive( int stage, int my_rank, int*  source_ptr);
-    int I_send(int stage, int my_rank, int p, int* dest_ptr);
-    void Send(float a, float b, int n, int dest);
-    void Receive(float* a_ptr, float* b_ptr, int* n_ptr, int source);
-
-    if (my_rank == 0){
+    if (my_rank == 0) {
         printf("Enter a, b, and n\n");
         scanf("%f %f %d", a_ptr, b_ptr, n_ptr);
-    } 
-    for (stage = 0; stage < Ceiling_log2(p); stage++)
-        if (I_receive(stage, my_rank, &source))
-            Receive(a_ptr, b_ptr, n_ptr, source);
-        else if (I_send(stage, my_rank, p, &dest))
-            Send(*a_ptr, *b_ptr, *n_ptr, dest);
-} /* Get_data1*/
+    }
+    MPI_Bcast(a_ptr, 1, MPI_FLOAT, 0, MPI_COMM_WORLD); /* Funciones Bcast*/ 
+    MPI_Bcast(b_ptr, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(n_ptr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+} /* Get_data2 */
 
 
 /********************************************************************/
 float Trap(
-          float  local_a   /* in */,
-          float  local_b   /* in */,
-          int    local_n   /* in */,
-          float  h         /* in */) {
+          float  local_a   /* in */, 
+          float  local_b   /* in */, 
+          int    local_n   /* in */, 
+          float  h         /* in */) { 
 
-    float integral;   /* Store result in integral  */
-    float x;
-    int i;
+    float integral;   /* Store result in integral  */ 
+    float x; 
+    int i; 
 
     float f(float x); /* function we're integrating */
 
-    integral = (f(local_a) + f(local_b))/2.0;
-    x = local_a;
-    for (i = 1; i <= local_n-1; i++) {
-        x = x + h;
+    integral = (f(local_a) + f(local_b))/2.0; 
+    x = local_a; 
+    for (i = 1; i <= local_n-1; i++) { 
+        x = x + h; 
         integral = integral + f(x); 
-    }
-    integral = integral*h;
+    } 
+    integral = integral*h; 
     return integral;
 } /*  Trap  */
 
