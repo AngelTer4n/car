@@ -1,4 +1,4 @@
-/* trap.c -- Parallel Trapezoidal Rule (segunda versión).
+/* trap.c -- Parallel Trapezoidal Rule (tercera versión). Estructura de Arbol
  *
  * Input: Se introduce los valores de integración [a,b] y el número de 
           trapezoides.
@@ -45,8 +45,7 @@ int main(int argc, char** argv) {
     int         tag = 0;
     MPI_Status  status;
 
-
-    void Get_data(float* a_ptr, float* b_ptr, 
+    void Get_data1(float* a_ptr, float* b_ptr, 
          int* n_ptr, int my_rank, int p); /*la función Get_data que reparta en input a los demás nodos*/
     float Trap(float local_a, float local_b, int local_n,
               float h);    /* Calculate local integral  */
@@ -60,7 +59,7 @@ int main(int argc, char** argv) {
     /* Find out how many processes are being used */
     MPI_Comm_size(MPI_COMM_WORLD, &p);
 
-    Get_data(&a, &b, &n, my_rank, p);/*Aquí leemos los datos desde la terminal*/
+    Get_data1(&a, &b, &n, my_rank, p);/*Aquí leemos los datos desde la terminal*/
 
     h = (b-a)/n;    /* h is the same for all processes */
     local_n = n/p;  /* So is the number of trapezoids */
@@ -99,58 +98,136 @@ int main(int argc, char** argv) {
 
 
 /********************************************************************/
-/*Está función se encarga de repartir el Input a todos los nodos.*/
-/* Se cargan los valores dados por el usuario a, b y n, y se calcula los parámetros
-para cada proceso, es decir, se calcula el lado izquierdo y derecho para cada trapezoide. En este
-caso los lados se nombran como a_ptr, b_ptr y n_ptr.*/
+/* Ceiling of log_2(x) is just the number of times
+ * times x-1 can be divided by 2 until the quotient
+ * is 0.  Dividing by 2 is the same as right shift.
+ */
+int Ceiling_log2(int  x  /* in */) {
+    /* Use unsigned so that right shift will fill
+     * leftmost bit with 0
+     */
+    unsigned temp = (unsigned) x - 1;
+    int result = 0;
 
-
-void Get_data(
-         float*  a_ptr    /* parámetro de salida */, 
-         float*  b_ptr    /* parámetro de salida */, 
-         int*    n_ptr    /* parámetro de salida */,
-         int     my_rank  /* parámetro de entrada  */,
-         int     p        /* paŕametro de entrada  */) {
-
-    int dest;          /* Las funciones MPI_Send y MPI_Recv       */
-    int source = 0;    /* Todas las variables locales utilizadas */
-    int tag;           /* Es la etiqueta para cada msj */
-    MPI_Status status;
-
-    /*Aquí se asegura que el nodo 0 se el que va a envíar el msj*/    
-    if (my_rank == 0){ 
-        printf("Enter a, b, and n\n"); /*Se procede a cargar los datos introduciodos por el usuario*/
-        scanf("%f %f %d", a_ptr, b_ptr, n_ptr);
-        for (dest = 1; dest < p; dest++){
-            tag = 0;           
-            MPI_Send(a_ptr, 1, MPI_FLOAT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro a_ptr*/ 
-            tag = 1;
-            MPI_Send(b_ptr, 1, MPI_FLOAT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro b_ptr*/
-            tag = 2;
-            MPI_Send(n_ptr, 1, MPI_INT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro n_ptr*/ 
-        }
-    } else {
-        tag = 0;
-        MPI_Recv(a_ptr, 1, MPI_FLOAT, source, tag, 
-            MPI_COMM_WORLD, &status);/*Se recibe el parámetro a_ptr*/
-        tag = 1;
-        MPI_Recv(b_ptr, 1, MPI_FLOAT, source, tag, 
-            MPI_COMM_WORLD, &status); /*Se recibe el parámetro b_ptr*/ 
-        tag = 2;
-        MPI_Recv(n_ptr, 1, MPI_INT, source, tag, 
-                MPI_COMM_WORLD, &status); /*Se recibe el parámetro n_ptr*/
+    while (temp != 0) {
+         temp = temp >> 1;
+         result = result + 1 ;
     }
-} 
+    return result;
+} /* Ceiling_log2 */
 
 
 /********************************************************************/
+int I_receive(
+        int   stage       /* in  */,
+        int   my_rank     /* in  */, 
+        int*  source_ptr  /* out */) {
+    int   power_2_stage;
+
+    /* 2^stage = 1 << stage */
+    power_2_stage = 1 << stage;
+    if ((power_2_stage <= my_rank) && 
+            (my_rank < 2*power_2_stage)){
+        *source_ptr = my_rank - power_2_stage;
+        return 1;
+    } else return 0;
+} /* I_receive */
+
+/********************************************************************/
+int I_send(
+        int   stage     /* in  */,
+        int   my_rank   /* in  */,
+        int   p         /* in  */, 
+        int*  dest_ptr  /* out */) {
+    int power_2_stage;
+
+    /* 2^stage = 1 << stage */
+    power_2_stage = 1 << stage;  
+    if (my_rank < power_2_stage){
+        *dest_ptr = my_rank + power_2_stage;
+        if (*dest_ptr >= p) return 0;
+        else return 1;
+    } else return 0;
+} /* I_send */            
+
+/********************************************************************/
+void Send(
+        float  a     /* in */,
+        float  b     /* in */, 
+        int    n     /* in */, 
+        int    dest  /* in */) {
+
+    MPI_Send(&a, 1, MPI_FLOAT, dest, 0, MPI_COMM_WORLD);
+    MPI_Send(&b, 1, MPI_FLOAT, dest, 1, MPI_COMM_WORLD);
+    MPI_Send(&n, 1, MPI_INT, dest, 2, MPI_COMM_WORLD);
+} /* Send */
 
 
+/********************************************************************/
+void Receive(
+        float*  a_ptr  /* out */, 
+        float*  b_ptr  /* out */,
+        int*    n_ptr  /* out */,
+        int     source /* in  */) {
+
+    MPI_Status status;
+
+    MPI_Recv(a_ptr, 1, MPI_FLOAT, source, 0, 
+        MPI_COMM_WORLD, &status);
+    MPI_Recv(b_ptr, 1, MPI_FLOAT, source, 1, 
+        MPI_COMM_WORLD, &status);
+    MPI_Recv(n_ptr, 1, MPI_INT, source, 2, 
+        MPI_COMM_WORLD, &status);
+} /* Receive */
 
 
+/********************************************************************/
+/* Function Get_data1
+ * Reads in the user input a, b, and n.
+ * Input parameters:
+ *     1.  int my_rank:  rank of current process.
+ *     2.  int p:  number of processes.
+ * Output parameters:  
+ *     1.  float* a_ptr:  pointer to left endpoint a.
+ *     2.  float* b_ptr:  pointer to right endpoint b.
+ *     3.  int* n_ptr:  pointer to number of trapezoids.
+ * Algorithm:
+ *     1.  Process 0 prompts user for input and
+ *         reads in the values.
+ *     2.  Process 0 sends input values to other
+ *         processes using hand-coded tree-structured
+ *         broadcast.
+ */
+void Get_data1(
+        float*  a_ptr    /* out */,
+        float*  b_ptr    /* out */,
+        int*    n_ptr    /* out */,
+        int     my_rank  /* in  */, 
+        int     p        /* in  */) {
+
+    int source;
+    int dest;
+    int stage;
+
+    int Ceiling_log2(int  x);
+    int I_receive( int stage, int my_rank, int*  source_ptr);
+    int I_send(int stage, int my_rank, int p, int* dest_ptr);
+    void Send(float a, float b, int n, int dest);
+    void Receive(float* a_ptr, float* b_ptr, int* n_ptr, int source);
+
+    if (my_rank == 0){
+        printf("Enter a, b, and n\n");
+        scanf("%f %f %d", a_ptr, b_ptr, n_ptr);
+    } 
+    for (stage = 0; stage < Ceiling_log2(p); stage++)
+        if (I_receive(stage, my_rank, &source))
+            Receive(a_ptr, b_ptr, n_ptr, source);
+        else if (I_send(stage, my_rank, p, &dest))
+            Send(*a_ptr, *b_ptr, *n_ptr, dest);
+} /* Get_data1*/
+
+
+/********************************************************************/
 float Trap(
           float  local_a   /* in */,
           float  local_b   /* in */,
@@ -167,17 +244,19 @@ float Trap(
     x = local_a;
     for (i = 1; i <= local_n-1; i++) {
         x = x + h;
-        integral = integral + f(x);
+        integral = integral + f(x); 
     }
     integral = integral*h;
     return integral;
 } /*  Trap  */
 
 
-float f(float x) {
+/********************************************************************/
+float f(float x) { 
     float return_val; 
     /* Calculate f(x). */
-    /* Store calculation in return_val. */
+    /* Store calculation in return_val. */ 
     return_val = x*x;
-    return return_val;
+    return return_val; 
 } /* f */
+
