@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
     MPI_Status  status;
 
 
-    void Repartidor(float* a_new, float* b_new, 
-         int* n_new, int my_rank, int p); /*la función Repartidor que reparta en input a los demás nodos*/
+    void Get_data(float* a_ptr, float* b_ptr, 
+         int* n_ptr, int my_rank, int p); /*la función Get_data que reparta en input a los demás nodos*/
     float Trap(float local_a, float local_b, int local_n,
               float h);    /* Calculate local integral  */
 
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     /* Find out how many processes are being used */
     MPI_Comm_size(MPI_COMM_WORLD, &p);
 
-    Repartidor(&a, &b, &n, my_rank, p);/*Aquí leemos los datos desde la terminal*/
+    Get_data(&a, &b, &n, my_rank, p);/*Aquí leemos los datos desde la terminal*/
 
     h = (b-a)/n;    /* h is the same for all processes */
     local_n = n/p;  /* So is the number of trapezoids */
@@ -102,13 +102,13 @@ int main(int argc, char** argv) {
 /*Está función se encarga de repartir el Input a todos los nodos.*/
 /* Se cargan los valores dados por el usuario a, b y n, y se calcula los parámetros
 para cada proceso, es decir, se calcula el lado izquierdo y derecho para cada trapezoide. En este
-caso los lados se nombran como a_new, b_new y n_new.*/
+caso los lados se nombran como a_ptr, b_ptr y n_ptr.*/
 
 
-void Repartidor(
-         float*  a_new    /* parámetro de salida */, 
-         float*  b_new    /* parámetro de salida */, 
-         int*    n_new    /* parámetro de salida */,
+void Get_data(
+         float*  a_ptr    /* parámetro de salida */, 
+         float*  b_ptr    /* parámetro de salida */, 
+         int*    n_ptr    /* parámetro de salida */,
          int     my_rank  /* parámetro de entrada  */,
          int     p        /* paŕametro de entrada  */) {
 
@@ -120,28 +120,28 @@ void Repartidor(
     /*Aquí se asegura que el nodo 0 se el que va a envíar el msj*/    
     if (my_rank == 0){ 
         printf("Enter a, b, and n\n"); /*Se procede a cargar los datos introduciodos por el usuario*/
-        scanf("%f %f %d", a_new, b_new, n_new);
+        scanf("%f %f %d", a_ptr, b_ptr, n_ptr);
         for (dest = 1; dest < p; dest++){
             tag = 0;           
-            MPI_Send(a_new, 1, MPI_FLOAT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro a_new*/ 
+            MPI_Send(a_ptr, 1, MPI_FLOAT, dest, tag, 
+                MPI_COMM_WORLD); /*Se envía el parámetro a_ptr*/ 
             tag = 1;
-            MPI_Send(b_new, 1, MPI_FLOAT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro b_new*/
+            MPI_Send(b_ptr, 1, MPI_FLOAT, dest, tag, 
+                MPI_COMM_WORLD); /*Se envía el parámetro b_ptr*/
             tag = 2;
-            MPI_Send(n_new, 1, MPI_INT, dest, tag, 
-                MPI_COMM_WORLD); /*Se envía el parámetro n_new*/ 
+            MPI_Send(n_ptr, 1, MPI_INT, dest, tag, 
+                MPI_COMM_WORLD); /*Se envía el parámetro n_ptr*/ 
         }
     } else {
         tag = 0;
-        MPI_Recv(a_new, 1, MPI_FLOAT, source, tag, 
-            MPI_COMM_WORLD, &status);/*Se recibe el parámetro a_new*/
+        MPI_Recv(a_ptr, 1, MPI_FLOAT, source, tag, 
+            MPI_COMM_WORLD, &status);/*Se recibe el parámetro a_ptr*/
         tag = 1;
-        MPI_Recv(b_new, 1, MPI_FLOAT, source, tag, 
-            MPI_COMM_WORLD, &status); /*Se recibe el parámetro b_new*/ 
+        MPI_Recv(b_ptr, 1, MPI_FLOAT, source, tag, 
+            MPI_COMM_WORLD, &status); /*Se recibe el parámetro b_ptr*/ 
         tag = 2;
-        MPI_Recv(n_new, 1, MPI_INT, source, tag, 
-                MPI_COMM_WORLD, &status); /*Se recibe el parámetro n_new*/
+        MPI_Recv(n_ptr, 1, MPI_INT, source, tag, 
+                MPI_COMM_WORLD, &status); /*Se recibe el parámetro n_ptr*/
     }
 } 
 
@@ -181,4 +181,3 @@ float f(float x) {
     return_val = x*x;
     return return_val;
 } /* f */
-
