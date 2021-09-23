@@ -1,19 +1,4 @@
-/* parallel_dot.c -- compute a dot product of a vector distributed among
- *     the processes.  Uses a block distribution of the vectors.
- *
- * Input: 
- *     n: global order of vectors
- *     x, y:  the vectors
- *
- * Output:
- *     the dot product of x and y.
- *
- * Note:  Arrays containing vectors are statically allocated.  Assumes
- *     n, the global order of the vectors, is divisible by p, the number
- *     of processes.
- *
- * See Chap 5, pp. 75 & ff in PPMPI.
- */
+//Programa que calcula el producto punto por segmentación.
 
 #include <stdio.h>
 #include "mpi.h"
@@ -21,7 +6,7 @@
 #include <time.h>
 
 
-#define MAX_LOCAL_ORDER 100000
+#define MAX_LOCAL_ORDER 300000
 
 int main(int argc, char* argv[]) {
     float  local_x[MAX_LOCAL_ORDER];
@@ -34,8 +19,7 @@ int main(int argc, char* argv[]) {
 
     srand((unsigned int)time(NULL));
 
-    void Read_vector(float local_v[], 
-          int n_bar, int p, int my_rank);
+    void Read_vector(float local_v[], int n_bar, int p, int my_rank);
     
     float Parallel_dot(float local_x[], float local_y[], int n_bar);
     
@@ -49,10 +33,8 @@ int main(int argc, char* argv[]) {
 //    }
 
     if (my_rank == 0) {
-       n = 4;
+       n = 262144;
     }
-
-
 
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     n_bar = n/p;
@@ -67,7 +49,6 @@ int main(int argc, char* argv[]) {
     MPI_Finalize();
 }  /* main */
    
-
 /*****************************************************************/
 void Read_vector(
          float  local_v[]  /* out */,
@@ -97,7 +78,6 @@ void Read_vector(
     }
 }  /* Read_vector */
 
-
 /*****************************************************************/
 float Serial_dot(
           float  x[]  /* in */, 
@@ -111,7 +91,6 @@ float Serial_dot(
         sum = sum + x[i]*y[i];
     return sum;
 } /* Serial_dot */
-
 
 /*****************************************************************/
 float Parallel_dot(
