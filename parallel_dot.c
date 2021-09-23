@@ -20,7 +20,7 @@
 
 #define MAX_LOCAL_ORDER 100
 
-main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     float  local_x[MAX_LOCAL_ORDER];
     float  local_y[MAX_LOCAL_ORDER];
     int    n;
@@ -113,3 +113,5 @@ float Parallel_dot(
         MPI_SUM, 0, MPI_COMM_WORLD);
     return dot;
 } /* Parallel_dot */
+
+
