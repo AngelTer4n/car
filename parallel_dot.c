@@ -17,8 +17,11 @@
 
 #include <stdio.h>
 #include "mpi.h"
+#include <stdlib.h>
+#include <time.h>
 
-#define MAX_LOCAL_ORDER 100
+
+#define MAX_LOCAL_ORDER 100000
 
 int main(int argc, char* argv[]) {
     float  local_x[MAX_LOCAL_ORDER];
@@ -29,24 +32,33 @@ int main(int argc, char* argv[]) {
     int    p;
     int    my_rank;
 
-    void Read_vector(char* prompt, float local_v[], int n_bar, int p,
-             int my_rank);
+    srand((unsigned int)time(NULL));
+
+    void Read_vector(float local_v[], 
+          int n_bar, int p, int my_rank);
+    
     float Parallel_dot(float local_x[], float local_y[], int n_bar);
     
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
+//    if (my_rank == 0) {
+//        printf("Enter the order of the vectors\n");
+//        scanf("%d", &n);
+//    }
+
     if (my_rank == 0) {
-        printf("Enter the order of the vectors\n");
-        scanf("%d", &n);
+       n = 4;
     }
+
+
+
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     n_bar = n/p;
 
-    Read_vector("the first vector", local_x, n_bar, p, my_rank);
-    Read_vector("the second vector", local_y, n_bar, p, my_rank);
-
+    Read_vector(local_x, n_bar, p, my_rank);
+    Read_vector(local_y, n_bar, p, my_rank);
     dot = Parallel_dot(local_x, local_y, n_bar);
 
     if (my_rank == 0)
@@ -58,22 +70,25 @@ int main(int argc, char* argv[]) {
 
 /*****************************************************************/
 void Read_vector(
-         char*  prompt     /* in  */,
          float  local_v[]  /* out */,
          int    n_bar      /* in  */,
          int    p          /* in  */,
          int    my_rank    /* in  */) {
     int i, q;
+    float a = 5.0;
     float temp[MAX_LOCAL_ORDER];
     MPI_Status status;
 
     if (my_rank == 0) {
-        printf("Enter %s\n", prompt);
-        for (i = 0; i < n_bar; i++)
-            scanf("%f", &local_v[i]);
-        for (q = 1; q < p; q++) {
-            for (i = 0; i < n_bar; i++)
-                scanf("%f", &temp[i]);
+
+       for(i=0; i<n_bar; i++){
+          local_v[i]=((float)rand()/(float)(RAND_MAX)) * a;
+       }
+       for (q = 1; q < p; q++) {
+            for (i = 0; i < n_bar; i++){
+                //scanf("%f", &temp[i]);
+                temp[i]=((float)rand()/(float)(RAND_MAX)) * a;
+            }
             MPI_Send(temp, n_bar, MPI_FLOAT, q, 0, MPI_COMM_WORLD);
         }
     } else {
