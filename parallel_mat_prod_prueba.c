@@ -159,9 +159,6 @@ void Parallel_matrix_prod(
                 local_Z[i][j] = local_Z[i][j] + local_X[i][k]*local_Y[k][j] + local_V[i][k]*local_W[k][j];
         }
     }
-
- //   MPI_Scatter(local_Z, local_n*MAX_ORDER, MPI_FLOAT, local_Z,
- //       local_n*MAX_ORDER, MPI_FLOAT, 0, MPI_COMM_WORLD);
 }  /* Parallel_matrix_vector_prod */
 
 
