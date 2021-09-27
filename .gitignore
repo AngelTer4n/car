@@ -3,4 +3,13 @@
 .bashrc
 .profile
 .ssh/
-
+.parallel_dot.c.un~
+.punto_serie.c.un~
+.vim/
+.viminfo
+.vimrc
+.vimrc~
+.vscode-server/
+.wget-hsts
+..vimrc.un~
+vimrc194
