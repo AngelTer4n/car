@@ -113,17 +113,30 @@ void Parallel_matrix_prod(
     //                     local_A[i][j]*global_x[j];
     //}
 
-    for (i = 0; i < local_n; i++){    
-        for (j = 0; j < n; j++){
-            local_C[i][j] = 0.0;
-            for (k = 0; k < n; k++){
-                local_C[i][j] = local_C[i][j] + local_A[i][k]*global_B[k][j];
+//    for (j = 0; j < n; j++){    
+//        for (i = 0; i < local_n; i++){
+//            local_C[i][j] = 0.0;
+//            for (k = 0; k < n; k++){
+//                local_C[i][j] = local_C[i][j] + local_A[i][k]*global_B[k][j];
             //printf("i = %d, k = %d, a_ik = %f\n", i, k, local_A[0][0]);
             //printf("k = %d, j = %d, b_kj = %f\n", k, j, local_B[0][0]);
             //printf("i = %d, j = %d, c_ij = %f\n", i, j, local_C[i][j]);
+//            }
+//        }
+//    }
+
+
+    for (j = 0; j < n; j++){
+        for (k = 0; k < n; k++){   
+            for (i = 0; i < local_n; i++){
+
+                local_C[i][j] = 0.0;
+
+                local_C[i][j] = local_C[i][j] + local_A[i][k]*global_B[k][j];
             }
         }
     }
+
 }  /* Parallel_matrix_vector_prod */
 
 
